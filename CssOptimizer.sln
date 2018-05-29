@@ -3,7 +3,11 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 15
 VisualStudioVersion = 15.0.27428.2037
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CssOptimizer", "CssOptimizer\CssOptimizer.csproj", "{7C32F196-7138-4FE7-9A8C-F64C5F1438F1}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CssOptimizer.Api", "CssOptimizer\CssOptimizer.Api.csproj", "{7C32F196-7138-4FE7-9A8C-F64C5F1438F1}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CssOptimizer.Services", "CssOptimizer.Services\CssOptimizer.Services.csproj", "{E6212CD6-29B2-4D78-BC4A-52CEAA1EB841}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CssOptimizer.Domain", "CssOptimizer.Domain\CssOptimizer.Domain.csproj", "{872A72F1-E210-42FE-BFA0-82F242050D83}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -15,6 +19,14 @@ Global
 		{7C32F196-7138-4FE7-9A8C-F64C5F1438F1}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{7C32F196-7138-4FE7-9A8C-F64C5F1438F1}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{7C32F196-7138-4FE7-9A8C-F64C5F1438F1}.Release|Any CPU.Build.0 = Release|Any CPU
+		{E6212CD6-29B2-4D78-BC4A-52CEAA1EB841}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E6212CD6-29B2-4D78-BC4A-52CEAA1EB841}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E6212CD6-29B2-4D78-BC4A-52CEAA1EB841}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{E6212CD6-29B2-4D78-BC4A-52CEAA1EB841}.Release|Any CPU.Build.0 = Release|Any CPU
+		{872A72F1-E210-42FE-BFA0-82F242050D83}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{872A72F1-E210-42FE-BFA0-82F242050D83}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{872A72F1-E210-42FE-BFA0-82F242050D83}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{872A72F1-E210-42FE-BFA0-82F242050D83}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
