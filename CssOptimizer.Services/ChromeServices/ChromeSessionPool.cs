@@ -5,7 +5,6 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using CssOptimizer.Domain.Exceptions;
-using MasterDevs.ChromeDevTools;
 
 namespace CssOptimizer.Services.ChromeServices
 {
@@ -13,86 +12,85 @@ namespace CssOptimizer.Services.ChromeServices
     {
         #region Config
 
-        private const int MIN_SESSION_POOL_COUNT = 10;
-        private const int MAX_SESSION_POOL_COUNT = 100;
-        private const int TIMEOUT_SECONDS = 120;
+        private const int MinSessionPoolCount = 10;
+        private const int MaxSessionPoolCount = 100;
+        private const int TimeoutSeconds = 120;
 
         #endregion
 
-        private static ChromeSessionInfo _chromeSessionInfo;
-        private static readonly ConcurrentDictionary<IChromeSession, bool> _chromeSessions = new ConcurrentDictionary<IChromeSession, bool>();
+        private static Chrome _chromeProcess;
+        private static readonly ConcurrentDictionary<ChromeSession, bool> ChromeSessions = new ConcurrentDictionary<ChromeSession, bool>();
 
-        public static void InitPool()
+        public static async Task InitPool()
         {
-            var initTasks = new List<Task>();
+            _chromeProcess = new Chrome();
 
-            var sessionInfo = new Chrome().CreateNewSessionAsync().Result;
-            _chromeSessionInfo = sessionInfo ?? throw new Exception("Chrome was not able to start!");
-
-            var chromeSessionFactory = new ChromeSessionFactory();
-
-            for (var i = 0; i < MIN_SESSION_POOL_COUNT; i++)
+            for (var i = 0; i < MinSessionPoolCount; i++)
             {
-                initTasks.Add(Task.Factory.StartNew(() =>
-                {
-                    var chromeSession = chromeSessionFactory.Create(sessionInfo.WebSocketDebuggerUrl);
-                    _chromeSessions.TryAdd(chromeSession, false);
-                }));
+                var chromeSession = await _chromeProcess.CreateNewSession();
+                ChromeSessions.TryAdd(chromeSession, false);
             }
-
-            Task.WaitAll(initTasks.ToArray());
         }
 
-        public static IChromeSession GetInstance()
+        public static Task<IEnumerable<ChromeSession>> GetActiveSessions()
         {
-            const bool IN_USE = true;
-            var chromeSession = _chromeSessions.FirstOrDefault(s => !s.Value).Key;
+            return Task.FromResult(ChromeSessions.Keys.AsEnumerable());
+        }
 
-            if (chromeSession == null)
+        public static ChromeSession GetInstance()
+        {
+            const bool inUse = true;
+            ChromeSession chromeSession;
+
+            lock (ChromeSessions)
             {
-                //Create new instance if all are busy, and max session count is not reached 
-                if (_chromeSessions.Count < MAX_SESSION_POOL_COUNT)
+                chromeSession = ChromeSessions.FirstOrDefault(s => !s.Value).Key;
+
+                if (chromeSession == null)
                 {
-                    var chromeSessionFactory = new ChromeSessionFactory();
-                    chromeSession = chromeSessionFactory.Create(_chromeSessionInfo.WebSocketDebuggerUrl);
-                    _chromeSessions.TryAdd(chromeSession, IN_USE);
-                    return chromeSession;
-                }
-
-                #region Timeout logic
-
-                var timeoutTime = DateTime.Now.AddSeconds(TIMEOUT_SECONDS);
-
-                //Wait until timeout
-                while (DateTime.Now < timeoutTime)
-                {
-                    Thread.Sleep(500);
-
-                    chromeSession = _chromeSessions.FirstOrDefault(s => !s.Value).Key;
-
-                    if (chromeSession != null)
+                    //Create new instance if all are busy, and max session count is not reached 
+                    if (ChromeSessions.Count < MaxSessionPoolCount)
                     {
-                        _chromeSessions[chromeSession] = IN_USE;
-                        break;
+                        chromeSession = _chromeProcess.CreateNewSession().Result;
+                        ChromeSessions.TryAdd(chromeSession, false);
+                        return chromeSession;
                     }
+
+                    #region Timeout logic
+
+                    var timeoutTime = DateTime.Now.AddSeconds(TimeoutSeconds);
+
+                    //Wait until timeout
+                    while (DateTime.Now < timeoutTime)
+                    {
+                        Thread.Sleep(500);
+
+                        chromeSession = ChromeSessions.FirstOrDefault(s => !s.Value).Key;
+
+                        if (chromeSession != null)
+                        {
+                            ChromeSessions[chromeSession] = inUse;
+                            break;
+                        }
+                    }
+
+                    //Throw exception.. server is busy..
+                    throw new NoAvailableInstacesException($"There is no free process to handle your request. Try again later, please.");
+
+                    #endregion
                 }
 
-                //Throw exception.. server is busy..
-                throw new NoAvailableInstacesException($"There is no free process to handle your request. Try again later, please.");
-
-                #endregion
+                ChromeSessions[chromeSession] = inUse;
             }
-
-            _chromeSessions[chromeSession] = IN_USE;
 
             return chromeSession;
         }
 
 
-        public static void ReleaseInstance(IChromeSession chromeSession)
+        public static void ReleaseInstance(ChromeSession chromeSession)
         {
-            const bool NOT_IN_USE = false;
-            _chromeSessions[chromeSession] = NOT_IN_USE;
+            const bool notInUse = false;
+            ChromeSessions[chromeSession] = notInUse;
         }
     }
 }

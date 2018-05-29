@@ -4,24 +4,25 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using BaristaLabs.ChromeDevTools.Runtime.CSS;
+using BaristaLabs.ChromeDevTools.Runtime.DOM;
+using BaristaLabs.ChromeDevTools.Runtime.Page;
 using CDN.Domain.Constants;
 using CssOptimizer.Domain.Validation;
 using CssOptimizer.Services.ChromeServices;
 using CssOptimizer.Services.Interfaces;
-using MasterDevs.ChromeDevTools;
-using MasterDevs.ChromeDevTools.Protocol.Chrome.CSS;
-using MasterDevs.ChromeDevTools.Protocol.Chrome.Page;
 using Microsoft.Extensions.Caching.Memory;
 using NUglify;
 using CacheExtensions = CssOptimizer.Services.Utils.CacheExtensions;
-using CSS = MasterDevs.ChromeDevTools.Protocol.Chrome.CSS;
-using DOM = MasterDevs.ChromeDevTools.Protocol.Chrome.DOM;
+using CSS = BaristaLabs.ChromeDevTools.Runtime.CSS;
+using DOM = BaristaLabs.ChromeDevTools.Runtime.DOM;
 
 namespace CssOptimizer.Services.Implementations
 {
     public class BrowserOptimizeCssService : IBrowserOptimizeCssService
     {
         private readonly IMemoryCache _cache;
+        private const int COMMAND_TIMEOUT = 120 * 1000;
 
         public BrowserOptimizeCssService(IMemoryCache cache)
         {
@@ -48,6 +49,9 @@ namespace CssOptimizer.Services.Implementations
 
         public Task<ResponseWrapper<Dictionary<string, string>>> OptimizeCssInParallelAsync(List<string> urls)
         {
+            //skip duplicates
+            urls = urls.Distinct().ToList();
+
             var result = new ResponseWrapper<Dictionary<string, string>>
             {
                 ValidationErrors = ValidateUrls(urls)
@@ -62,7 +66,7 @@ namespace CssOptimizer.Services.Implementations
 
             foreach (var url in urls)
             {
-                tasks.Add(url, GetMinCssForUrlAsync(url)); 
+                tasks.Add(url, GetMinCssForUrlAsync(url));
             }
 
             Task.WaitAll(tasks.Values.ToArray());
@@ -88,13 +92,13 @@ namespace CssOptimizer.Services.Implementations
             try
             {
                 //Navigate to page, enable and start rule usage tracking
-                await chromeSession.SendAsync(new DOM.EnableCommand());
-                await chromeSession.SendAsync(new CSS.EnableCommand());
-                await chromeSession.SendAsync(new CSS.StartRuleUsageTrackingCommand());
-                await chromeSession.SendAsync(new NavigateCommand { Url = url });
+                await chromeSession.InternalSession.DOM.Enable(new DOM.EnableCommand());
+                await chromeSession.InternalSession.CSS.Enable(new CSS.EnableCommand());
+                await chromeSession.InternalSession.CSS.StartRuleUsageTracking(new CSS.StartRuleUsageTrackingCommand());
+                await chromeSession.InternalSession.Page.Navigate(new NavigateCommand { Url = url });
 
                 var rules = new List<RuleUsage>();
-                CommandResponse<TakeCoverageDeltaCommandResponse> coverageResponse;
+                TakeCoverageDeltaCommandResponse coverageResponse;
 
 
                 //TODO: smart logic to wait report, currently just wait when delta == 0
@@ -102,35 +106,38 @@ namespace CssOptimizer.Services.Implementations
                 do
                 {
                     //https://chromedevtools.github.io/devtools-protocol/tot/CSS#method-takeCoverageDelta
-                    coverageResponse = await chromeSession.SendAsync(new TakeCoverageDeltaCommand());
-                    rules.AddRange(coverageResponse.Result.Coverage);
+                    coverageResponse = await chromeSession.InternalSession.CSS.TakeCoverageDelta(new TakeCoverageDeltaCommand());
+                    coverageResponse.Coverage = coverageResponse.Coverage ?? new RuleUsage[0];
 
                     //If no found.. sleep and try it again
-                    if (coverageResponse.Result.Coverage.Length == 0)
+                    if (coverageResponse.Coverage.Length == 0)
                     {
                         Thread.Sleep(++waitCount * 100);
 
                         //try again after sleep
-                        coverageResponse = await chromeSession.SendAsync(new TakeCoverageDeltaCommand());
-                        rules.AddRange(coverageResponse.Result.Coverage);
+                        //timeout 120 seconds
+                        coverageResponse = await chromeSession.InternalSession.CSS.TakeCoverageDelta(new TakeCoverageDeltaCommand());
+                        coverageResponse.Coverage = coverageResponse.Coverage ?? new RuleUsage[0];
+
+                        rules.AddRange(coverageResponse.Coverage);
 
                         //if found, reset sleep count, because it means that chrome is processing css
-                        if (coverageResponse.Result.Coverage.Length > 0)
+                        if (coverageResponse.Coverage.Length > 0)
                             waitCount = 0;
                     }
                 }
-                while (coverageResponse.Result.Coverage.Length != 0
+                while (coverageResponse.Coverage.Length != 0
                        || waitCount <= 3);
 
                 //Stop tacking
-                await chromeSession.SendAsync(new CSS.StopRuleUsageTrackingCommand());
+                await chromeSession.InternalSession.CSS.StopRuleUsageTracking(new CSS.StopRuleUsageTrackingCommand());
 
                 //Get stylesheets
                 var usedRules = rules.Where(r => r.Used).ToList();
                 var styleSheetIds = usedRules.Select(r => r.StyleSheetId).Distinct();
                 var styleSheets = styleSheetIds.Select(s => new
                 {
-                    chromeSession.SendAsync(new GetStyleSheetTextCommand { StyleSheetId = s }).Result.Result.Text,
+                    chromeSession.InternalSession.CSS.GetStyleSheetText(new GetStyleSheetTextCommand { StyleSheetId = s }).Result.Text,
                     StyleSheetId = s
                 }).ToList();
 

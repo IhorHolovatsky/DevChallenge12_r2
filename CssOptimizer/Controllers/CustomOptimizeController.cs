@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using Microsoft.AspNetCore.Http;
+using CssOptimizer.Services.Interfaces;
 using Microsoft.AspNetCore.Mvc;
 
 namespace CssOptimizer.Api.Controllers
@@ -11,18 +11,40 @@ namespace CssOptimizer.Api.Controllers
     [Route("api/v2/optimize")]
     public class CustomOptimizeController : Controller
     {
+        private readonly ICustomOptimizeCssService _customOptimizeCssService;
+
+        public CustomOptimizeController(ICustomOptimizeCssService customOptimizeCssService)
+        {
+            _customOptimizeCssService = customOptimizeCssService ??
+                                        throw new ArgumentNullException(nameof(customOptimizeCssService));
+        }
+
         [HttpGet]
         [Route("css")]
-        public IActionResult OptimizeCss([FromQuery]string url)
+        public async Task<IActionResult> OptimizeCss([FromQuery]string url)
         {
-            return Ok();
+            var result = await _customOptimizeCssService.OptimizeCssAsync(url);
+
+            if (!result.IsSuccess)
+            {
+                return BadRequest(result.ValidationErrors);
+            }
+
+            return Content(result.Items);
         }
         
         [HttpPost]
         [Route("css/parallel")]
-        public IActionResult OptimizeCssParallel([FromBody]List<string> url)
+        public async Task<IActionResult> OptimizeCssParallel([FromBody]List<string> urls)
         {
-            return Ok();
+            var result = await _customOptimizeCssService.OptimizeCssInParallelAsync(urls);
+
+            if (!result.IsSuccess)
+            {
+                return BadRequest(result.ValidationErrors);
+            }
+
+            return Json(result.Items);
         }
     }
 }

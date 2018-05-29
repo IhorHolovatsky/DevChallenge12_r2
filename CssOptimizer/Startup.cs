@@ -1,8 +1,8 @@
-﻿using CssOptimizer.Api.Filters;
+﻿using System.Threading.Tasks;
+using CssOptimizer.Api.Filters;
 using CssOptimizer.Services.ChromeServices;
 using CssOptimizer.Services.Implementations;
 using CssOptimizer.Services.Interfaces;
-using MasterDevs.ChromeDevTools;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
@@ -26,6 +26,7 @@ namespace CssOptimizer.Api
         public void ConfigureServices(IServiceCollection services)
         {
             services.AddScoped<IBrowserOptimizeCssService, BrowserOptimizeCssService>();
+            services.AddScoped<ICustomOptimizeCssService, CustomOptimizeCssService>();
 
             services.AddMvc(opt => opt.Filters.Add<GlobalExceptionFilter>());
             services.AddSwaggerGen(c =>
@@ -36,7 +37,12 @@ namespace CssOptimizer.Api
                         Title = ApiName,
                         Version = "v1"
                     });
+
+                // UseFullTypeNameInSchemaIds replacement for .NET Core
+                c.CustomSchemaIds(x => x.FullName);
             });
+
+            var a = AngleSharp.Configuration.Default.GetType();
 
             ChromeSessionPool.InitPool();
         }
