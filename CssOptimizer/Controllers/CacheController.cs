@@ -20,11 +20,20 @@ namespace CssOptimizer.Api.Controllers
             _cache = cache ?? throw new ArgumentNullException(nameof(cache));
         }
 
-        [HttpGet]
+        [HttpDelete]
         [Route("reset")]
         public IActionResult Reset()
         {
             _cache.Reset();
+
+            return Ok();
+        }
+
+        [HttpDelete]
+        [Route("reset/url")]
+        public IActionResult Reset(string url)
+        {
+            _cache.Reset(url);
 
             return Ok();
         }

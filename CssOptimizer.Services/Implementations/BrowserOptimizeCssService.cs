@@ -5,15 +5,16 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using BaristaLabs.ChromeDevTools.Runtime.CSS;
-using BaristaLabs.ChromeDevTools.Runtime.DOM;
 using BaristaLabs.ChromeDevTools.Runtime.Page;
 using CDN.Domain.Constants;
+using CssOptimizer.Domain.Configuration;
 using CssOptimizer.Domain.Validation;
 using CssOptimizer.Services.ChromeServices;
 using CssOptimizer.Services.Interfaces;
+using CssOptimizer.Services.Utils;
 using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.Options;
 using NUglify;
-using CacheExtensions = CssOptimizer.Services.Utils.CacheExtensions;
 using CSS = BaristaLabs.ChromeDevTools.Runtime.CSS;
 using DOM = BaristaLabs.ChromeDevTools.Runtime.DOM;
 
@@ -22,13 +23,16 @@ namespace CssOptimizer.Services.Implementations
     public class BrowserOptimizeCssService : IBrowserOptimizeCssService
     {
         private readonly IMemoryCache _cache;
-        private const int COMMAND_TIMEOUT = 120 * 1000;
+        private readonly CacheConfiguration _cacheConfiguration;
 
-        public BrowserOptimizeCssService(IMemoryCache cache)
+        public BrowserOptimizeCssService(IMemoryCache cache,
+                                         IOptions<CacheConfiguration> cachOptionsAccessor)
         {
-            _cache = cache;
+            _cache = cache ?? throw new ArgumentNullException(nameof(cache));
+            _cacheConfiguration = cachOptionsAccessor?.Value ?? throw new ArgumentNullException(nameof(cachOptionsAccessor));
         }
-
+        
+        /// <inheritdoc />
         public async Task<ResponseWrapper<string>> OptimizeCssAsync(string url)
         {
             var result = new ResponseWrapper<string>
@@ -46,7 +50,8 @@ namespace CssOptimizer.Services.Implementations
             result.Items = minCss;
             return result;
         }
-
+        
+        /// <inheritdoc />
         public Task<ResponseWrapper<Dictionary<string, string>>> OptimizeCssInParallelAsync(List<string> urls)
         {
             //skip duplicates
@@ -156,7 +161,7 @@ namespace CssOptimizer.Services.Implementations
                 var minCss = Uglify.Css(usedCssStrb.ToString()).Code;
 
                 //Cache it for one hour
-                CacheExtensions.Set(_cache, url, minCss, TimeSpan.FromHours(1));
+                _cache.Set(url, minCss, TimeSpan.FromSeconds(_cacheConfiguration.UrlCacheTime));
 
                 return minCss;
             }

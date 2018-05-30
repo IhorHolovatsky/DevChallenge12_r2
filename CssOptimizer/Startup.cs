@@ -1,5 +1,9 @@
-﻿using System.Threading.Tasks;
+﻿using System.Text;
+using System.Threading.Tasks;
+using CDN.Domain.Constants;
 using CssOptimizer.Api.Filters;
+using CssOptimizer.Domain.Configuration;
+using CssOptimizer.Domain.Constants;
 using CssOptimizer.Services.ChromeServices;
 using CssOptimizer.Services.Implementations;
 using CssOptimizer.Services.Interfaces;
@@ -42,13 +46,24 @@ namespace CssOptimizer.Api
                 c.CustomSchemaIds(x => x.FullName);
             });
 
-            var a = AngleSharp.Configuration.Default.GetType();
+            //just use this to be sure that AngleSharp lib will be loaded
+            var initAngleSharp = AngleSharp.Configuration.Default.GetType();
 
-            ChromeSessionPool.InitPool();
+            //Register popular encoding providers (to be able parse response from http client)
+            Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
+
+            //Register options
+            var chromeSessionPoolConfig = Configuration.GetSection(ConfigurationConstants.CHROME_SESSION_POOL_CONFIGURATION_SECTION);
+            services.Configure<CacheConfiguration>(Configuration.GetSection(ConfigurationConstants.CACHE_CONFIGURATION_SECTION));
+            services.Configure<ChromeSessionPoolConfiguration>(chromeSessionPoolConfig);
+
+            //Don't wait until chrome sessions pool will be initialize.
+            //In production probably will be better to wait.
+            ChromeSessionPool.InitPool(chromeSessionPoolConfig.Get<ChromeSessionPoolConfiguration>());
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
-        public void Configure(IApplicationBuilder app, IHostingEnvironment env)
+        public void Configure(IApplicationBuilder app, IHostingEnvironment env, IApplicationLifetime applicationLifetime)
         {
             if (env.IsDevelopment())
             {
@@ -63,6 +78,13 @@ namespace CssOptimizer.Api
             });
 
             app.UseMvc();
+
+            applicationLifetime.ApplicationStopping.Register(OnShutdown);
+        }
+
+        private void OnShutdown()
+        {
+            ChromeSessionPool.Dispose();
         }
     }
 }

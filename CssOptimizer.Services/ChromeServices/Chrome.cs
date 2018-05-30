@@ -13,7 +13,6 @@ namespace CssOptimizer.Services.ChromeServices
     /// <summary>
     /// Represents a Chrome instance.
     /// Might not work if you try to open several instances on the same port.
-    /// 
     /// </summary>
     public class Chrome : IDisposable
     {
@@ -96,7 +95,7 @@ namespace CssOptimizer.Services.ChromeServices
         /// <returns></returns>
         public async Task CloseSession(ChromeSession session)
         {
-            //TODO(Tera):if i close all the sessions, chrome closes itself! i can use this to gracefully close this stuff, OR maybe i should prevent it?
+            //TODO:if i close all the sessions, chrome closes itself! i can use this to gracefully close this stuff, OR maybe i should prevent it?
             using (var webClient = GetDebuggerClient())
             {
                 var result = await webClient.PostAsync("/json/close/" + session.Id, null);
@@ -117,7 +116,7 @@ namespace CssOptimizer.Services.ChromeServices
 
         private HttpClient GetDebuggerClient()
         {
-            var chromeHttpClient = new HttpClient()
+            var chromeHttpClient = new HttpClient
             {
                 BaseAddress = new Uri($"http://localhost:{_remoteDebuggingPort}")
             };

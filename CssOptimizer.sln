@@ -9,6 +9,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CssOptimizer.Services", "Cs
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CssOptimizer.Domain", "CssOptimizer.Domain\CssOptimizer.Domain.csproj", "{872A72F1-E210-42FE-BFA0-82F242050D83}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CssOptimizer.Tests", "CssOptimizer.Tests\CssOptimizer.Tests.csproj", "{64652FF3-CBF7-4AA5-9082-98983DB183CD}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -27,6 +29,10 @@ Global
 		{872A72F1-E210-42FE-BFA0-82F242050D83}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{872A72F1-E210-42FE-BFA0-82F242050D83}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{872A72F1-E210-42FE-BFA0-82F242050D83}.Release|Any CPU.Build.0 = Release|Any CPU
+		{64652FF3-CBF7-4AA5-9082-98983DB183CD}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{64652FF3-CBF7-4AA5-9082-98983DB183CD}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{64652FF3-CBF7-4AA5-9082-98983DB183CD}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{64652FF3-CBF7-4AA5-9082-98983DB183CD}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
