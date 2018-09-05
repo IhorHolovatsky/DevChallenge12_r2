@@ -1,6 +1,5 @@
 ﻿using System.Text;
 using System.Threading.Tasks;
-using CDN.Domain.Constants;
 using CssOptimizer.Api.Filters;
 using CssOptimizer.Domain.Configuration;
 using CssOptimizer.Domain.Constants;
@@ -33,6 +32,7 @@ namespace CssOptimizer.Api
             services.AddScoped<ICustomOptimizeCssService, CustomOptimizeCssService>();
 
             services.AddMvc(opt => opt.Filters.Add<GlobalExceptionFilter>());
+
             services.AddSwaggerGen(c =>
             {
                 c.SwaggerDoc("v1",
@@ -59,7 +59,18 @@ namespace CssOptimizer.Api
 
             //Don't wait until chrome sessions pool will be initialize.
             //In production probably will be better to wait.
-            ChromeSessionPool.InitPool(chromeSessionPoolConfig.Get<ChromeSessionPoolConfiguration>());
+            var chromeSessionPoolConfigObject = chromeSessionPoolConfig.Get<ChromeSessionPoolConfiguration>();
+            if (chromeSessionPoolConfigObject.IsPreInitializeChromeSessionPool)
+            {
+                if (chromeSessionPoolConfigObject.WaitForInitializing)
+                {
+                    Task.WaitAll(ChromeSessionPool.InitPool(chromeSessionPoolConfigObject));
+                }
+                else
+                {
+                    ChromeSessionPool.InitPool(chromeSessionPoolConfigObject);
+                }
+            }
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.

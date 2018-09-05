@@ -96,7 +96,7 @@ namespace CssOptimizer.Services.ChromeServices
 
         public static void Dispose()
         {
-            _chromeProcess.Dispose();
+            _chromeProcess?.Dispose();
         }
     }
 }
